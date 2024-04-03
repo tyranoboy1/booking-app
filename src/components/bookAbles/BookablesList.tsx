@@ -1,48 +1,68 @@
-import { Fragment, useMemo, useState } from "react";
+import { ChangeEvent, Fragment, useReducer } from "react";
 import data from "../../data/static.json";
 import { FaArrowRight } from "react-icons/fa";
 import ButtonCommon from "../../common/button/Button";
 import SelectBoxCommon from "../../common/select/SelectBox";
+import bookAblesReducer, { IBookables } from "./reducer/bookAblesReducer";
+
+const { bookables, days, sessions } = data;
+
+/** 리듀서 초기상태 */
+const initialState = {
+  group: "Rooms",
+  selectIndex: 0,
+  isShowDetail: true,
+  bookables,
+};
 
 const BookablesList = () => {
-  const [selectIndex, setSelectIndex] = useState<number>(1);
-  const [group, setGroup] = useState<string>("Kit");
-  const [isShowDetail, setIsShowDetail] = useState<boolean>(false);
+  const [state, dispatch] = useReducer(bookAblesReducer, initialState);
+  const { group, selectIndex, isShowDetail, bookables } = state;
   /** new Set 함수로 중복없는 배열을 만들 수 있다. */
-  const groups = [...new Set(data.bookables.map((b) => b.group))];
-  const bookables = data.bookables;
-  const bookablesInGroup = bookables.filter((b) => b.group === group);
+  const bookablesInGroup = bookables.filter(
+    (b: IBookables) => b.group === group
+  );
 
-  /** 해당 리스트의 상태를 업데이트 해주는 함수 */
-  // 컴포넌트에서 변수를 직접적으로 변경해도 컴포넌트가 갱신되지 않는다. => UI는 바뀌지않음
-  const booksablesButtonClick = (pSelect: number) => {
-    setSelectIndex(pSelect);
+  const bookable = bookablesInGroup[selectIndex];
+  const groups = [...new Set(bookables.map((b: IBookables) => b.group))];
+
+  /** 그룹 체인지 이벤트 */
+  const changeGroup = (e: ChangeEvent<HTMLSelectElement>) => {
+    dispatch({
+      type: "SET_GROUP",
+      payload: e.target.value,
+    });
+  };
+  /** 선택된 목록 체인지 이벤트 */
+  const changeBookable = (selectedIndex: number) => {
+    dispatch({
+      type: "SET_BOOKABLE",
+      payload: selectedIndex,
+    });
   };
 
+  /** nextButton dispatch */
   const nextBookable = () => {
-    setSelectIndex((i) => (i + 1) % bookablesInGroup.length);
+    dispatch({ type: "NEXT_BOOKABLE" });
   };
 
-  const bookable = useMemo(() => {
-    return bookablesInGroup[selectIndex];
-  }, [selectIndex]);
+  /** show detail dispatch */
+  const toggleDetails = () => {
+    dispatch({ type: "TOGGLE_IS_DETAIL" });
+  };
 
   return (
     <Fragment>
       <div>
         <SelectBoxCommon
           selectValue={group}
-          onChange={(e) => setGroup(e.target.value)}
+          onChange={changeGroup}
           groupData={groups}
         />
-
         <ul className="bookables items-list-nav">
-          {bookablesInGroup.map((b, i) => (
+          {bookablesInGroup.map((b: IBookables, i: number) => (
             <li key={b.id} className={i === selectIndex ? "selected" : ""}>
-              <ButtonCommon
-                onClick={() => booksablesButtonClick(i)}
-                title={b.title}
-              />
+              <ButtonCommon onClick={() => changeBookable(i)} title={b.title} />
             </li>
           ))}
         </ul>
@@ -63,7 +83,7 @@ const BookablesList = () => {
                   <input
                     type="checkbox"
                     checked={isShowDetail}
-                    onChange={() => setIsShowDetail((has) => !has)}
+                    onChange={toggleDetails}
                   />
                   Show Details
                 </label>
@@ -77,13 +97,13 @@ const BookablesList = () => {
                 <h3>Availability</h3>
                 <div className="bookable-availability">
                   <ul>
-                    {bookable.days.sort().map((d) => (
-                      <li key={d}>{data.days[d]}</li>
+                    {bookable.days.sort().map((d: number) => (
+                      <li key={d}>{days[d]}</li>
                     ))}
                   </ul>
                   <ul>
-                    {bookable.sessions.map((s) => (
-                      <li key={s}>{data.sessions[s]}</li>
+                    {bookable.sessions.map((s: number) => (
+                      <li key={s}>{sessions[s]}</li>
                     ))}
                   </ul>
                 </div>
